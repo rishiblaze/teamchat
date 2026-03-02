@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: user belongs to org
+    function userOrg(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.orgId;
+    }
+    function userRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+    function isMember(roomId, uid) {
+      return uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+    }
+
+    // Organizations: read-only for users in that org (we don't store orgs per-se; rooms have orgId)
+    match /organizations/{orgId} {
+      allow read: if request.auth != null && userOrg(request.auth.uid) == orgId;
+      allow write: if false;
+    }
+
+    // Users: each user can read/update only their own doc (created by backend/seed)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rooms: only members of the org can list; only members can read room
+    match /rooms/{roomId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
+      allow create: if request.auth != null && userOrg(request.auth.uid) == request.resource.data.orgId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid in resource.data.memberIds ||
+        userRole(request.auth.uid) == 'admin'
+      );
+    }
+
+    // Messages: only room members can read/write
+    match /rooms/{roomId}/messages/{messageId} {
+      allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+      allow update: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+      allow delete: if false;
+    }
+
+    // Presence: room members only
+    match /rooms/{roomId}/presence/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+    }
+
+    // Typing indicators: room members only
+    match /rooms/{roomId}/typing/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+    }
+  }
+}

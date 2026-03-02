@@ -1,0 +1,12 @@
+# Ignore local env and venv
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.git/
+.gitignore
+*.md
