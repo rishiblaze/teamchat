@@ -53,7 +53,7 @@ def stream_gemini_response(
     except Exception as e:
         raise RuntimeError(f"Vertex AI init failed: {e}") from e
 
-    model = GenerativeModel("gemini-1.5-flash-001")
+    model = GenerativeModel("gemini-2.5-flash")
     prompt = (
         "[Conversation History]\n"
         f"{conversation_text}\n"

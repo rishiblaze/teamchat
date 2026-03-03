@@ -61,7 +61,7 @@ async def invoke_ai(
 
     # Fetch last N messages (including the one that invoked AI)
     limit = get_settings().ai_context_message_limit
-    docs = list(messages_ref.order_by("timestamp", direction="DESC").limit(limit).get())
+    docs = list(messages_ref.order_by("timestamp", direction="DESCENDING").limit(limit).get())
     messages = []
     participant_names = set()
     for msg_doc in reversed(docs):

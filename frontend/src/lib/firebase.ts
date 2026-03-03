@@ -11,22 +11,29 @@ const config = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-let app: FirebaseApp
-let auth: Auth
-let db: Firestore
+let app: FirebaseApp | undefined
+let auth: Auth | undefined
+let db: Firestore | undefined
 
-export function initFirebase() {
-  app = initializeApp(config)
-  auth = getAuth(app)
-  db = getFirestore(app)
-  return { app, auth, db }
+function ensureInitialized() {
+  if (!app) {
+    app = initializeApp(config)
+    auth = getAuth(app)
+    db = getFirestore(app)
+  }
 }
 
-export function getAuthInstance() {
-  return auth
+export function initFirebase() {
+  ensureInitialized()
+  return { app: app!, auth: auth!, db: db! }
+}
+
+export function getAuthInstance(): Auth {
+  ensureInitialized()
+  return auth!
 }
 
 export function getDb(): Firestore {
-  if (!db) throw new Error('Firebase not initialized')
-  return db
+  ensureInitialized()
+  return db!
 }

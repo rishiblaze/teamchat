@@ -1,11 +1,12 @@
 """
 Seed Firestore with organizations, users (Firestore docs only; create Auth users in Firebase Console or Admin SDK),
-rooms, and sample messages. Run after creating Firebase Auth users manually or via create_users script.
+rooms, and sample messages. Run after creating Firebase Auth users via scripts.create_auth_users.
 
 Usage:
-  Set GOOGLE_APPLICATION_CREDENTIALS and run:
+  Set GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_CLOUD_PROJECT in backend/.env, then:
   python -m scripts.seed_data
 """
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -14,16 +15,52 @@ from pathlib import Path
 # Add app to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Load .env from backend root
+_backend_root = Path(__file__).resolve().parent.parent
+_env_file = _backend_root / ".env"
+if _env_file.exists():
+    with open(_env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip())
+
 from firebase_admin import credentials, firestore, auth, initialize_app
 
-# Initialize with default credentials or path
+
+def _project_id():
+    pid = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if pid:
+        return pid
+    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    if cred_path and os.path.isfile(cred_path):
+        with open(cred_path) as f:
+            return json.load(f).get("project_id")
+    return None
+
+
 cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if cred_path and os.path.isfile(cred_path):
+if cred_path:
+    if not os.path.isfile(cred_path):
+        sys.exit(
+            f"Credentials file not found: {cred_path}\n"
+            "In backend/.env set GOOGLE_APPLICATION_CREDENTIALS to the full path of your\n"
+            "Firebase service account JSON (e.g. backend/service-account.json)."
+        )
     cred = credentials.Certificate(cred_path)
 else:
     cred = credentials.ApplicationDefault()
+
+project_id = _project_id()
+if not project_id:
+    sys.exit(
+        "Firebase needs a project ID. Set GOOGLE_CLOUD_PROJECT in backend/.env\n"
+        "or use a service account JSON that contains project_id."
+    )
+
 try:
-    initialize_app(cred)
+    initialize_app(cred, options={"projectId": project_id})
 except Exception:
     pass  # already initialized
 
