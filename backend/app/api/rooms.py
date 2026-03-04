@@ -1,41 +1,29 @@
 """Rooms API: manage room membership (admin only)."""
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from firebase_admin import firestore as admin_firestore
 
-from app.core.auth import get_uid_from_headers
 from app.core.firebase import get_firestore
-from app.services.tenant import get_user_org, validate_room_access
+from app.services.tenant import validate_room_access
 
 router = APIRouter()
 
 
-def _require_uid(authorization: str | None = Header(None)) -> str:
-    uid = get_uid_from_headers(authorization)
-    if not uid:
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
-    return uid
+def _require_admin(request: Request) -> tuple[str, str]:
+    """Return (uid, org_id) or raise 403 if the caller is not an admin.
 
-
-def _require_admin(authorization: str | None) -> tuple[str, str]:
-    """Return (uid, org_id) or raise if not authenticated / not admin."""
-    uid = _require_uid(authorization)
-    user_meta = get_user_org(uid)
-    if not user_meta or not user_meta.get("org_id"):
-        raise HTTPException(status_code=403, detail="User not associated with an organization")
-    if user_meta.get("role") != "admin":
+    uid and org_id are already resolved by TenantMiddleware — this just
+    adds the role guard on top.
+    """
+    if request.state.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    return uid, user_meta["org_id"]
+    return request.state.uid, request.state.org_id
 
 
 @router.get("/org-users")
-async def list_org_users(authorization: str | None = Header(None)):
+async def list_org_users(request: Request):
     """Return all users in the requesting user's organization."""
-    uid = _require_uid(authorization)
-    user_meta = get_user_org(uid)
-    if not user_meta or not user_meta.get("org_id"):
-        raise HTTPException(status_code=403, detail="User not associated with an organization")
-    org_id = user_meta["org_id"]
+    org_id: str = request.state.org_id
 
     db = get_firestore()
     docs = db.collection("users").where("orgId", "==", org_id).get()
@@ -56,13 +44,9 @@ class AddMemberBody(BaseModel):
 
 
 @router.post("/{room_id}/members")
-async def add_member(
-    room_id: str,
-    body: AddMemberBody,
-    authorization: str | None = Header(None),
-):
+async def add_member(room_id: str, body: AddMemberBody, request: Request):
     """Add a user to a room. Admin only. Target user must be in the same org."""
-    uid, org_id = _require_admin(authorization)
+    uid, org_id = _require_admin(request)
     validate_room_access(uid, org_id, room_id)
 
     db = get_firestore()
@@ -79,13 +63,9 @@ async def add_member(
 
 
 @router.delete("/{room_id}/members/{user_id}")
-async def remove_member(
-    room_id: str,
-    user_id: str,
-    authorization: str | None = Header(None),
-):
+async def remove_member(room_id: str, user_id: str, request: Request):
     """Remove a user from a room. Admin only. Admin cannot remove themselves."""
-    uid, org_id = _require_admin(authorization)
+    uid, org_id = _require_admin(request)
     validate_room_access(uid, org_id, room_id)
 
     if user_id == uid:
