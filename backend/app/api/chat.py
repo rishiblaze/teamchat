@@ -2,15 +2,14 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import json
 
-from app.core.auth import get_uid_from_headers
 from app.core.firebase import get_firestore
 from app.config import get_settings
-from app.services.tenant import get_user_org, validate_room_access
+from app.services.tenant import validate_room_access
 from app.services.gemini import (
     format_history_for_gemini,
     is_ai_invocation,
@@ -26,32 +25,20 @@ class InvokeBody(BaseModel):
     last_message_content: str
 
 
-def _require_uid(authorization: str | None = Header(None)) -> str:
-    uid = get_uid_from_headers(authorization)
-    if not uid:
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
-    return uid
-
-
 @router.post("/invoke")
-async def invoke_ai(
-    body: InvokeBody,
-    authorization: str | None = Header(None),
-):
+async def invoke_ai(body: InvokeBody, request: Request):
     """Invoke Gemini for the room. Call this when the last user message contains @Gemini or @AI.
     Creates an AI message in Firestore and streams content into it. Returns SSE stream of chunks.
     """
-    uid = _require_uid(authorization)
+    # Auth and org resolved by TenantMiddleware — available on request.state
+    uid: str = request.state.uid
+    org_id: str = request.state.org_id
+    user_name: str = request.state.display_name
+
     room_id = body.room_id
     last_message_content = body.last_message_content
     if not is_ai_invocation(last_message_content):
         raise HTTPException(status_code=400, detail="Last message must mention @Gemini or @AI")
-
-    user_meta = get_user_org(uid)
-    if not user_meta or not user_meta.get("org_id"):
-        raise HTTPException(status_code=403, detail="User not associated with an organization")
-    org_id = user_meta["org_id"]
-    user_name = user_meta.get("display_name") or "User"
 
     validate_room_access(uid, org_id, room_id)
 
