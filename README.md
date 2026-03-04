@@ -46,28 +46,25 @@ A production-grade multi-tenant chat platform where teams participate in the sam
 
 ## Live Demo & Test Credentials
 
-**Live URL**: After deploying to GCP (see [Deploy to GCP](#deploy-to-gcp)), your app will be available at:
-- **`https://YOUR_PROJECT_ID.web.app`** (or the URL shown by `firebase deploy --only hosting`)
-
-Replace the placeholder below with that URL before sharing with evaluators.
-
 | Item | Value |
 |------|--------|
-| **Live app** | `https://_______________.web.app` |
-| **Backend API** | Cloud Run URL (e.g. `https://teamchat-api-xxxxx-uc.a.run.app`) |
+| **Live app** | https://teamchat-489019.web.app |
+| **Backend API** | Cloud Run (`teamchat-api`, region `us-central1`) |
 
-**Test logins** (after running seed + create_auth_users):
+**Test logins:**
 
-| Organization | Email                     | Password     | Role   |
-|-------------|----------------------------|--------------|--------|
-| Acme Corp   | sarah@acme.example.com     | TestPass123! | admin  |
-| Acme Corp   | mike@acme.example.com      | TestPass123! | member |
-| Acme Corp   | lisa@acme.example.com      | TestPass123! | member |
-| Globex Inc  | alice@globex.example.com   | TestPass123! | admin  |
-| Globex Inc  | bob@globex.example.com     | TestPass123! | member |
-| Globex Inc  | carol@globex.example.com   | TestPass123! | member |
+| Organization | Email | Password | Role | Can manage members? |
+|---|---|---|---|---|
+| Acme Corp | sarah@acme.example.com | TestPass123! | **admin** | Yes — sees "Manage Members" button |
+| Acme Corp | mike@acme.example.com | TestPass123! | member | No |
+| Acme Corp | lisa@acme.example.com | TestPass123! | member | No |
+| Globex Inc | alice@globex.example.com | TestPass123! | **admin** | Yes — sees "Manage Members" button |
+| Globex Inc | bob@globex.example.com | TestPass123! | member | No |
+| Globex Inc | carol@globex.example.com | TestPass123! | member | No |
 
-**Verify tenant isolation**: Log in as Sarah (Acme), see only Acme rooms. Log in as Alice (Globex), see only Globex rooms.
+**Verify tenant isolation**: Log in as Sarah (Acme) → see only Acme rooms. Log in as Alice (Globex) → see only Globex rooms. Neither can see the other org's data.
+
+**Verify member management**: Log in as Sarah or Alice (admins) → open any room → click **"Manage Members"** button in the room header to add/remove org members from that room. Member-role users do not see this button.
 
 ## Local Development
 
