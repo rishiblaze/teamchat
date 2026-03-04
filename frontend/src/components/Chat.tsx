@@ -14,7 +14,8 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
-import { invokeGemini } from '../lib/api'
+import { invokeGemini, fetchOrgUsers, addRoomMember, removeRoomMember } from '../lib/api'
+import type { OrgUser } from '../lib/api'
 import type { UserMeta } from '../App'
 
 import { getDb as getDbLib, getAuthInstance as getAuthLib } from '../lib/firebase'
@@ -46,6 +47,11 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
   const [sending, setSending] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
   const [showNewRoom, setShowNewRoom] = useState(false)
+  const [showMembersModal, setShowMembersModal] = useState(false)
+  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [membersError, setMembersError] = useState('')
+  const [invokeError, setInvokeError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const db = getDbLib()
 
@@ -129,9 +135,14 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
     scrollToBottom()
   }, [messages, scrollToBottom])
 
+  useEffect(() => {
+    setInvokeError('')
+  }, [currentRoomId])
+
   const sendMessage = async () => {
     const text = input.trim()
     if (!text || !currentRoomId || sending) return
+    setInvokeError('')
     setSending(true)
     setInput('')
     try {
@@ -147,15 +158,19 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
       if (isInvoke) {
         const token = await getAuthLib().currentUser?.getIdToken()
         if (token) {
-          const stream = await invokeGemini(currentRoomId, text, token)
-          if (stream) {
-            const reader = stream.getReader()
-            const dec = new TextDecoder()
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
-              dec.decode(value)
+          try {
+            const stream = await invokeGemini(currentRoomId, text, token)
+            if (stream) {
+              const reader = stream.getReader()
+              const dec = new TextDecoder()
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                dec.decode(value)
+              }
             }
+          } catch (e) {
+            setInvokeError(e instanceof Error ? e.message : 'AI is temporarily unavailable. Please try again.')
           }
         }
       }
@@ -203,6 +218,44 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
   }, [currentRoomId, user.uid, db])
 
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
+
+  const openMembersModal = async () => {
+    setShowMembersModal(true)
+    setMembersError('')
+    setMembersLoading(true)
+    try {
+      const token = await getAuthLib().currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      const users = await fetchOrgUsers(token)
+      setOrgUsers(users)
+    } catch (e: unknown) {
+      setMembersError(e instanceof Error ? e.message : 'Failed to load users')
+    } finally {
+      setMembersLoading(false)
+    }
+  }
+
+  const handleAddMember = async (userId: string) => {
+    if (!currentRoomId) return
+    try {
+      const token = await getAuthLib().currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      await addRoomMember(currentRoomId, userId, token)
+    } catch (e: unknown) {
+      setMembersError(e instanceof Error ? e.message : 'Failed to add member')
+    }
+  }
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!currentRoomId) return
+    try {
+      const token = await getAuthLib().currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      await removeRoomMember(currentRoomId, userId, token)
+    } catch (e: unknown) {
+      setMembersError(e instanceof Error ? e.message : 'Failed to remove member')
+    }
+  }
 
   const createRoom = async () => {
     const name = newRoomName.trim()
@@ -276,6 +329,14 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
         <main className="chat-main">
           {currentRoom ? (
             <>
+              <div className="room-header">
+                <span className="room-title"># {currentRoom.name}</span>
+                {userMeta.role === 'admin' && (
+                  <button type="button" className="manage-members-btn" onClick={openMembersModal}>
+                    Manage Members ({currentRoom.memberIds.length})
+                  </button>
+                )}
+              </div>
               <div className="messages-panel">
                 <div className="messages">
                   {messages.map((m) => (
@@ -300,6 +361,12 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
                   Online ({Object.keys(presence).length}): {Object.values(presence).map((p) => p.name).join(', ')}
                 </div>
               </div>
+              {invokeError && (
+                <div className="invoke-error" role="alert">
+                  {invokeError}
+                  <button type="button" className="invoke-error-dismiss" onClick={() => setInvokeError('')} aria-label="Dismiss">✕</button>
+                </div>
+              )}
               <div className="composer">
                 <input
                   type="text"
@@ -318,6 +385,75 @@ export default function Chat({ user, userMeta }: { user: { uid: string }; userMe
           )}
         </main>
       </div>
+
+      {showMembersModal && currentRoom && (
+        <div className="modal-overlay" onClick={() => setShowMembersModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span>Members — #{currentRoom.name}</span>
+              <button type="button" className="modal-close" onClick={() => setShowMembersModal(false)}>✕</button>
+            </div>
+            {membersError && <div className="modal-error">{membersError}</div>}
+            {membersLoading ? (
+              <div className="modal-loading">Loading…</div>
+            ) : (
+              <div className="modal-body">
+                <div className="members-section">
+                  <div className="members-section-label">IN ROOM</div>
+                  {orgUsers.filter((u) => currentRoom.memberIds.includes(u.uid)).length === 0 && (
+                    <div className="members-empty">No members found.</div>
+                  )}
+                  {orgUsers
+                    .filter((u) => currentRoom.memberIds.includes(u.uid))
+                    .map((u) => (
+                      <div key={u.uid} className="member-row">
+                        <div className="member-info">
+                          <span className="member-name">{u.displayName}</span>
+                          <span className="member-email">{u.email}</span>
+                          <span className={`member-role ${u.role}`}>{u.role}</span>
+                        </div>
+                        {u.uid !== user.uid && (
+                          <button
+                            type="button"
+                            className="member-btn remove"
+                            onClick={() => handleRemoveMember(u.uid)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+
+                <div className="members-section">
+                  <div className="members-section-label">ADD MEMBERS</div>
+                  {orgUsers.filter((u) => !currentRoom.memberIds.includes(u.uid)).length === 0 && (
+                    <div className="members-empty">All org members are already in this room.</div>
+                  )}
+                  {orgUsers
+                    .filter((u) => !currentRoom.memberIds.includes(u.uid))
+                    .map((u) => (
+                      <div key={u.uid} className="member-row">
+                        <div className="member-info">
+                          <span className="member-name">{u.displayName}</span>
+                          <span className="member-email">{u.email}</span>
+                          <span className={`member-role ${u.role}`}>{u.role}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="member-btn add"
+                          onClick={() => handleAddMember(u.uid)}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -291,6 +291,30 @@ body {
   border-top: 1px solid #3e4046;
   background: #1a1d21;
 }
+.invoke-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(248, 113, 113, 0.12);
+  border-top: 1px solid rgba(248, 113, 113, 0.25);
+  color: #f87171;
+  font-size: 0.875rem;
+}
+.invoke-error-dismiss {
+  background: none;
+  border: none;
+  color: #f87171;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+.invoke-error-dismiss:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
 .composer input {
   flex: 1;
   padding: 0.75rem 1rem;
@@ -326,4 +350,177 @@ body {
   align-items: center;
   justify-content: center;
   color: #6c6e73;
+}
+
+/* Room header bar */
+.room-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid #3e4046;
+  background: #242830;
+}
+.room-title {
+  font-weight: 600;
+  color: #fff;
+}
+.manage-members-btn {
+  margin-left: auto;
+  padding: 0.3rem 0.75rem;
+  background: transparent;
+  border: 1px solid #3e4046;
+  color: #b0b3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.manage-members-btn:hover {
+  background: #3e4046;
+  color: #fff;
+}
+
+/* Members modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: #242830;
+  border: 1px solid #3e4046;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #3e4046;
+  font-weight: 600;
+  color: #fff;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: #b0b3b8;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.modal-close:hover {
+  background: #3e4046;
+  color: #fff;
+}
+.modal-error {
+  margin: 0.75rem 1.25rem 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 6px;
+  color: #f87171;
+  font-size: 0.85rem;
+}
+.modal-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #b0b3b8;
+}
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.75rem 0;
+}
+.members-section {
+  padding: 0 0 0.75rem;
+}
+.members-section + .members-section {
+  border-top: 1px solid #3e4046;
+  padding-top: 0.75rem;
+}
+.members-section-label {
+  padding: 0 1.25rem 0.4rem;
+  font-size: 0.7rem;
+  color: #6c6e73;
+  letter-spacing: 0.05em;
+}
+.members-empty {
+  padding: 0.25rem 1.25rem;
+  font-size: 0.85rem;
+  color: #6c6e73;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+}
+.member-row:hover {
+  background: #2d3036;
+}
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.member-name {
+  font-size: 0.9rem;
+  color: #e4e6eb;
+  font-weight: 500;
+}
+.member-email {
+  font-size: 0.75rem;
+  color: #6c6e73;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.member-role {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  width: fit-content;
+  background: #3e4046;
+  color: #b0b3b8;
+}
+.member-role.admin {
+  background: rgba(13, 110, 253, 0.2);
+  color: #a5d6ff;
+}
+.member-btn {
+  padding: 0.3rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.member-btn.remove {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+.member-btn.remove:hover {
+  background: rgba(248, 113, 113, 0.3);
+}
+.member-btn.add {
+  background: rgba(13, 110, 253, 0.15);
+  color: #a5d6ff;
+  border: 1px solid rgba(13, 110, 253, 0.3);
+}
+.member-btn.add:hover {
+  background: rgba(13, 110, 253, 0.3);
 }

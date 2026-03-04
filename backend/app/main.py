@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, health
+from app.api import chat, health, rooms
 from app.core.firebase import init_firebase
 
 app = FastAPI(
@@ -22,3 +22,4 @@ init_firebase()
 
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(rooms.router, prefix="/api/rooms", tags=["rooms"])
