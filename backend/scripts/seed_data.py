@@ -81,6 +81,7 @@ USERS = {
     "globex": [
         {"email": "alice@globex.example.com", "display_name": "Alice", "role": "admin"},
         {"email": "bob@globex.example.com", "display_name": "Bob", "role": "member"},
+        {"email": "carol@globex.example.com", "display_name": "Carol", "role": "member"},
     ],
 }
 
@@ -114,7 +115,17 @@ ROOMS_DATA = {
         {
             "name": "general",
             "description": "Globex general",
-            "member_emails": ["alice@globex.example.com", "bob@globex.example.com"],
+            "member_emails": ["alice@globex.example.com", "bob@globex.example.com", "carol@globex.example.com"],
+            "messages": [
+                ("alice@globex.example.com", "Alice", "Hey team, should we migrate our pipeline to Cloud Run?"),
+                ("bob@globex.example.com", "Bob", "I think so — it'll simplify deployments significantly"),
+                ("carol@globex.example.com", "Carol", "Agreed. @Gemini what are the main benefits of Cloud Run over GKE?"),
+            ],
+        },
+        {
+            "name": "engineering",
+            "description": "Globex engineering",
+            "member_emails": ["alice@globex.example.com", "bob@globex.example.com", "carol@globex.example.com"],
             "messages": [],
         },
     ],
