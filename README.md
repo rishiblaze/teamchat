@@ -65,6 +65,7 @@ Replace the placeholder below with that URL before sharing with evaluators.
 | Acme Corp   | lisa@acme.example.com      | TestPass123! | member |
 | Globex Inc  | alice@globex.example.com   | TestPass123! | admin  |
 | Globex Inc  | bob@globex.example.com     | TestPass123! | member |
+| Globex Inc  | carol@globex.example.com   | TestPass123! | member |
 
 **Verify tenant isolation**: Log in as Sarah (Acme), see only Acme rooms. Log in as Alice (Globex), see only Globex rooms.
 
@@ -157,7 +158,7 @@ Quick checklist:
 ```
 backend/
   app/
-    api/          # health, chat (invoke)
+    api/          # health, chat (invoke), rooms (membership)
     core/         # firebase, auth
     services/     # tenant, gemini
   scripts/
@@ -165,7 +166,7 @@ backend/
     seed_data.py
 frontend/
   src/
-    components/   # Login, Chat
+    components/   # Login, Chat (with member management modal)
     lib/          # firebase, api
 firestore.rules
 firestore.indexes.json
